@@ -21,4 +21,7 @@ module constants_m
   integer(SI),parameter :: DIV = 10
   integer(SI), parameter :: DIV_LIGHT = 5
 
+  integer(SI), parameter :: COLOR_NUM = 4
+  integer(SI), parameter :: A = 0
+
 end module constants_m

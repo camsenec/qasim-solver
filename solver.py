@@ -26,7 +26,7 @@ class ColoringProblemSolver:
 
 if __name__ == '__main__':
 
-    simulator = ColoringProblemSolver(10,20)
+    simulator = ColoringProblemSolver(10,11)
     ans = simulator.solve()
     print("ans")
     print(ans)
