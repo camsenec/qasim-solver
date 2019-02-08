@@ -11,7 +11,7 @@ FFLAGS = -shared
 OBJS = constants.o \
        calc_energ.o \
 			 field.o \
-			 scalar_pointer_char_wrapper.o\
+			 ut.o \
        qa.o
 
 main: pimc
@@ -23,9 +23,10 @@ pimc: $(OBJS)
 lib: $(OBJS)
 	$(FC) $(FFLAGS) $(OBJS) -o libfort.so
 
-calc_energ.o: constants.o
-field.o: constants.o calc_energ.o
-qa.o: field.o constants.o calc_energ.o scalar_pointer_char_wrapper.o
+ut.o: constants.o
+calc_energ.o: constants.o ut.o
+field.o: constants.o calc_energ.o ut.o
+qa.o: field.o constants.o calc_energ.o ut.o
 
 clean:
 	rm -rf $(OBJS) pimc *.mod

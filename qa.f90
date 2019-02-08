@@ -1,5 +1,5 @@
 function qa(n, m)
-  use scalar_pointer_char_wrapper_m
+  use ut_m
   use field_m
   use constants_m
   use calc_energ_m
@@ -7,12 +7,12 @@ function qa(n, m)
   implicit none
   !=========parameter　declarelation========
   !---------parameter for spinglass and general---------
+  ! n : 1スライスにおけるサイト数, m : トロッター数
+  integer(SI),intent(in) :: n, m
   ! i : 汎用イテレーター, tmp : 汎用一時変数, count : 汎用カウンタ
   integer(DI) :: i, tmp, count, count_color
   ! tau : モンテカルロステップ数
   integer(DI) :: tau
-  ! n : 1スライスにおけるサイト数
-  integer(SI),intent(in) :: n
   !x:サイトのx座標, y:サイトのy座標
   integer(SI) :: x, y, c
   ! spin_old(i,:,:): i番目のトロッタースライスの遷移前の状態
@@ -20,7 +20,8 @@ function qa(n, m)
   integer(SI), allocatable, dimension(:,:,:,:) :: spin_old, spin_new
   ! energ(i,c) : 色c, i番目のスライスの遷移前のエネルギー
   real(DR), allocatable, dimension(:,:) :: energ
-  ! energ_old_qa : 遷移前の合計エネルギー, energ_new_qa : 遷移後の合計エネルギ-
+  ! energ_old_qa : 遷移前の合計エネルギー
+  ! energ_new_qa : 遷移後の合計エネルギ-
   ! energ_delta : 遷移前から遷移後のエネルギー差
   real(DR) :: energ_old_qa, energ_new_qa, energ_delta
   ! j_couple : カップリング
@@ -41,24 +42,12 @@ function qa(n, m)
   real(DR) :: gamma, gamma_init
   ! beta : 逆温度
   real(DR) :: beta
-  ! m : トロッター数
-  integer(DI), intent(in) :: m
   ! k : スライス
-  integer(DI):: k
-
-  !--------parameter for application--------
-  integer(SI) :: id
-  character(len=128) :: name
-  character(len=128) :: filename
+  integer(SI):: k
 
   !======== initialize ========
-  !-------- initialize for io-------
 
-  ! open file
-  filename = trim("data/") // trim("SG") // trim(".dat")
-  open(in, file = filename, status = 'old')
-
-  !-------- parameter for qa(rf. roman martonak et al.)------
+  !-------- parameter for qa------
 
   ! set beta(becaues mt = m  / beta))
   beta = 10_DR
@@ -70,11 +59,14 @@ function qa(n, m)
   !set initial gamma
   gamma = gamma_init
   ! set qa_step
-  qa_step = 1
+  qa_step = 100000
 
+  !check parameter
   print *, 'beta:', beta
   print *, 'initial_gamma:', gamma_init
   print *, 'qa_step:', qa_step
+  print *, 'n', n
+  print *, 'm', m
 
   !-------- initialize --------
   ! set random seed
@@ -90,28 +82,39 @@ function qa(n, m)
   call init_sg(spin_old, m, n)
 
   ! initialize coupling
-  call init_coupling(j_couple, n, in)
+  call init_coupling(j_couple, n)
+
+  ! initialize energ
+  j_tilda = -1 / (2 * beta) * log(tanh(beta * gamma / m))
+  energ_old_qa = energ_qa(j_couple, spin_old, j_tilda, m, n)
 
   !======== Quantumn Annealing ========
   do tau = 1, qa_step
-    ! calculate j_tilda
-    j_tilda = -1 / (2 * beta) * log(tanh(beta * gamma / m))
-    ! calculate energ_old_qa based on j_tilda
-    energ_old_qa = energ_qa(j_couple, spin_old, j_tilda, m, n)
-    !print *, "new",energ_old_qa
+
+    if(tau > 1) then
+      ! remove TMF_term
+      energ_old_qa = energ_old_qa - TMF_term(spin_old, j_tilda, m, n)
+      ! calculate j_tilda
+      j_tilda = -1 / (2 * beta) * log(tanh(beta * gamma / m))
+      ! add TMF_term
+      energ_old_qa = energ_old_qa + TMF_term(spin_old, j_tilda, m, n)
+    end if
 
     do k = 1, m
       do i = 1,n*n
         ! select reversed site
         call choose(site_x, site_y, n)
+
         do c = 1, COLOR_NUM
           ! reverse spin
           call reverse_spin(site_x, site_y, spin_old, spin_new, c, k, m, n)
 
           ! calculate energ_new
-          energ_delta = delta_qa(j_couple, spin_new, j_tilda, site_x, site_y, k, m, n)
+          !energ_old_qa = energ_qa(j_couple, spin_old, j_tilda, m, n)
+          !energ_new_qa = energ_qa(j_couple, spin_new, j_tilda, m, n)
+          energ_delta = delta_qa(j_couple, spin_old, spin_new, j_tilda, site_x, site_y, c, k, m, n)
           energ_new_qa = energ_old_qa + energ_delta
-          print *,  tau, energ_delta, energ_qa(j_couple, spin_new, j_tilda, m, n) - energ_qa(j_couple, spin_old, j_tilda, m, n)
+          !print *,  k,i,c,tau, energ_new_qa - energ_old_qa, energ_delta
 
           ! calculate p
           if (energ_delta <= 0) then
@@ -131,29 +134,36 @@ function qa(n, m)
       end do
     end do
 
-    !print *, "old",energ_old_qa
 
-    count = 0
+    !end judge and outout
     count_color = 0
-    if(mod(tau, DIV_LIGHT) == 0) then
+    if(mod(tau, DIV) == 0) then
       do c = 1, COLOR_NUM
+
+        !calculate energy
         do k =  1, m
           energ(k, c) = energ_sa(j_couple, spin_old, c, k, m, n)
         end do
+
         print *, "j_tilda : ", j_tilda
         print *, "qa_step : ", tau
+        count = 0
         do k = 1, m
+          print *, beta, gamma, energ(k, c)
+
+          !end judge among slices
           if (k < m .and. abs(energ(k, c) - energ(k + 1, c)) .le. EPS*1e-4) then
             count = count + 1
           end if
-          print *, beta, gamma, energ(k, c)
         end do
+
+        !end judge among color
+        if(count .ge. m - 1) then
+          count_color = count_color + 1
+        end if
+
       end do
 
-    end if
-
-    if(count .ge. m - 1) then
-      count_color = count_color + 1
     end if
 
     if(count_color .ge. COLOR_NUM) then
@@ -165,13 +175,10 @@ function qa(n, m)
 
   end do
 
-  close(in)
-  !call output_spin(filename, spin_old, 1_DI, m, n)
+  !call output_spin(spin_old, 1_DI, m, n)
   qa = minval(energ(:,1))
   deallocate(j_couple)
   deallocate(spin_old, spin_new)
   deallocate(energ)
-  close(in)
-  close(out)
 
 end function qa
