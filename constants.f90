@@ -21,6 +21,6 @@ module constants_m
   integer(SI),parameter :: DIV = 10
 
   integer(SI), parameter :: COLOR_NUM = 4
-  integer(SI), parameter :: A = 0.2
+  real(DR), parameter :: A = 0.7
 
 end module constants_m

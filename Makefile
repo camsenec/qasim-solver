@@ -29,4 +29,4 @@ field.o: constants.o calc_energ.o ut.o
 qa.o: field.o constants.o calc_energ.o ut.o
 
 clean:
-	rm -rf $(OBJS) pimc *.mod
+	rm -rf $(OBJS) pimc *.mod libfort.so

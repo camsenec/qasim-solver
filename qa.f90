@@ -59,9 +59,10 @@ function qa(n, m)
   !set initial gamma
   gamma = gamma_init
   ! set qa_step
-  qa_step = 100000
+  qa_step = 10000
 
   !check parameter
+  print *, 'A:', A
   print *, 'beta:', beta
   print *, 'initial_gamma:', gamma_init
   print *, 'qa_step:', qa_step
@@ -171,11 +172,10 @@ function qa(n, m)
     end if
 
     !update gamma
-    gamma = gamma*0.99
-
+    gamma = gamma_init*0.999**tau
   end do
 
-  !call output_spin(spin_old, 1_DI, m, n)
+  call output_spin(spin_old, 1_SI, m, n)
   qa = minval(energ(:,1))
   deallocate(j_couple)
   deallocate(spin_old, spin_new)

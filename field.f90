@@ -4,6 +4,7 @@
 !       by tanaka tomoya, Kobe University.
 !-------------------------------------------------------------------
 module field_m
+  use iso_c_binding
   use constants_m
   use calc_energ_m
   use ut_m
@@ -121,9 +122,13 @@ contains
     integer(SI), dimension(COLOR_NUM,n,n,m), intent(in) :: spin
     integer(SI), intent(in) :: n
     integer(SI) :: ix, iy, c, k, m
-    character(len=256)::linebuf
+    character(len=128) :: filename
+    character(len=256) :: linebuf
 
-    open(OUT,file="SG.csv", status="replace")
+    filename = trim("data/") // trim("SGResult") // trim(".csv")
+    print *, filename
+    print *, A
+    open(OUT,file=filename, status="replace")
     do iy = 1, n
       do ix = 1, n
         do c = 1, COLOR_NUM
