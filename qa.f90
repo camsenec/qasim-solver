@@ -59,7 +59,7 @@ function qa(n, m)
   !set initial gamma
   gamma = gamma_init
   ! set qa_step
-  qa_step = 10000
+  qa_step = 100
 
   !check parameter
   print *, 'A:', A
@@ -172,7 +172,7 @@ function qa(n, m)
     end if
 
     !update gamma
-    gamma = gamma_init*0.999**tau
+    gamma = gamma_init*0.99**tau
   end do
 
   call output_spin(spin_old, 1_SI, m, n)
